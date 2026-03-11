@@ -1,5 +1,6 @@
 import sys
 import os
+import shutil
 import json
 import re
 import subprocess
@@ -17,9 +18,54 @@ from PyQt6.QtGui import QColor
 # --- Global Dictionary Configuration ---
 DICT_FILE_PATH = "custom_dictionary.json"
 DEFAULT_DICTIONARY = [
-    "Attack", "Ready", "Groggy", "End", "Loop", "Channeling", "Break",
-    "Idle", "Walk", "Run", "Jump", "Fall", "Hit", "Dead", "Skill",
-    "Ultimate", "Phase", "Start", "Intro", "Outro"
+    # 기존 추출된 핵심 단어들
+    "Attack", "Ready", "Groggy", "End", "(Loop)", "Channeling", "Break", "Idle", "Walk", "Run", 
+    "Jump", "Fall", "Hit", "Dead", "Skill", "Ultimate", "Phase", "Start", "Intro", "Outro", 
+    "Chase", "Dash", "Active", "Combo", "Recovery", "Swap", "Action", "Trait", "Charging", 
+    "Finish", "Turn", "Axe", "Swing", "Front", "Back", "Power", "Wave", "Backt", "Heft", 
+    "Grind", "Stomp", "First", "Second", "Overdrive", "Colorchange", "Lightning", "Orb", 
+    "Thunder", "Riding", "Flip", "Loop", "Scratch", "Aerial", "Down", "Raise", "Move", 
+    "Smash", "Fire", "Ball", "Crush", "Slough", "Vomit", "Deactive", "Land", "Airborne", 
+    "Rise", "Teleport", "Soul", "Guard", "Bomb", "Rush", "Final", "Full", "Double", "Slash", 
+    "Repeat", "Default", "Activate", "Deactivate", "Crystal", "Shoot", "Pounce", "Bedivere", 
+    "Expose", "Enhanced", "Last", "Talk", "Tag", "Change", "Pierce", "Vertical", "Javelin", 
+    "Dive", "Throw", "Punish", "Thrust", "Counter", "Landing", "Stand", "Cloak", "Off", 
+    "Ascend", "Gather", "Casting", "Get", "Weapon", "Human", "Rising", "Call", "Horse", 
+    "Chopping", "Tackle", "Uppercut", "Roar", "Mob", "Grab", "Success", "Fail", "Drop", 
+    "Explosion", "Destroyed", "Normal", "Mutant", "Shop", "Boss", "Gate", "Mutantl", 
+    "Bloodlust", "Calm", "Enter", "Main", "Ultskill", "Exit",
+    
+    # [새롭게 대량 추가된 게임 개발용 단어 사전]
+    # 애니메이션 상태 / 전환 / 기본 행동
+    "Transition", "Blend", "Wait", "Cancel", "Interrupt", "Stun", "Knockback", "Knockdown", 
+    "Flinch", "Parry", "Dodge", "Evade", "Roll", "Slide", "Hover", "Fly", "Crouch", "Crawl", 
+    "Climb", "Swim", "Spawn", "Despawn", "Die", "Revive", "Resurrect", "Sleep", "Wake",
+    "Stop", "Go", "Play", "Pause", "Resume", "Skip", "Next", "Prev", "Previous", "Clear",
+    "Block", "Avoid", "Escape", "Catch", "Hold", "Drop", "Pull", "Push", "Lift", "Throw",
+    
+    # 신체 부위 / 방향 / 위치
+    "Head", "Body", "Arm", "Leg", "Hand", "Foot", "Left", "Right", "Top", "Bottom", 
+    "Upper", "Lower", "Forward", "Backward", "Center", "Core", "Tail", "Wing", "Horn",
+    "Eye", "Eye", "Mouth", "Face", "Neck", "Chest", "Back", "Shoulder", "Knee", "Toe",
+    "Up", "Down", "Mid", "Middle", "Side", "Edge", "Corner", "Inside", "Outside",
+    
+    # 무기 / 장비 / 도구
+    "Sword", "Shield", "Bow", "Arrow", "Gun", "Rifle", "Spear", "Dagger", "Staff", 
+    "Wand", "Hammer", "Whip", "Blade", "Cannon", "Bullet", "Missile", "Projectile",
+    "Armor", "Helmet", "Gloves", "Boots", "Ring", "Amulet", "Cape", "Belt", "Bag", "Potion",
+    
+    # 속성 / 마법 / 이펙트
+    "Ice", "Water", "Wind", "Earth", "Nature", "Poison", "Toxic", "Venom", "Light", "Holy",
+    "Dark", "Shadow", "Magic", "Spell", "Aura", "Barrier", "Heal", "Buff", "Debuff",
+    "Burst", "Spark", "Smoke", "Dust", "Blood", "Gore", "Impact", "Hitbox", "Hurtbox",
+    "Fireball", "Frost", "Flame", "Lightning", "Shock", "Burn", "Freeze", "Slow", "Haste",
+    
+    # UI 및 시스템 / 기타
+    "Icon", "Cursor", "Select", "Click", "Press", "Release", "Drag", 
+    "Open", "Close", "Show", "Hide", "Fade", "Zoom", "Pan", "Scroll", "Alert", "Warning",
+    "Base", "Effect", "FX", "VFX", "SFX", "Particle", "Spine", "Skeletal", "Sprite",
+    "Menu", "Button", "Text", "Font", "Label", "Title", "Window", "Panel", "Tab", "Slot",
+    "Level", "Stage", "Room", "Area", "Zone", "Map", "World", "Quest", "Task", "Mission"
 ]
 
 def load_dictionary():
@@ -35,7 +81,7 @@ def save_dictionary(words_list):
     with open(DICT_FILE_PATH, 'w', encoding='utf-8') as f:
         json.dump(words_list, f, indent=4, ensure_ascii=False)
 
-def correct_spelling(word, custom_dict, threshold=80):
+def correct_spelling(word, custom_dict, threshold=85):
     if len(word) <= 2:
         return word.capitalize(), False
         
@@ -46,10 +92,16 @@ def correct_spelling(word, custom_dict, threshold=80):
         return dict_lower[word_lower], False
 
     choices = list(dict_lower.keys())
+    # thefuzz scorer 변경: 일반 ratio 대신 token_sort_ratio나 단순히 threshold 값을 높임.
+    # 길이가 짧은 단어(예: Die, Turn)의 경우 ratio가 비정상적으로 높게 나올 수 있으므로 threshold를 85로 상향 조정
     best_match = process.extractOne(word_lower, choices, scorer=fuzz.ratio)
     
+    # 추가 검증: 두 단어의 길이 차이가 2 이상 나면 아예 다른 단어일 확률이 높으므로 교정하지 않음 (예: Die(3) vs Dive(4)는 길이차이 1이라 통과할 수 있지만, Return(6) vs Turn(4)은 길이차이 2)
     if best_match and best_match[1] >= threshold:
         corrected_lower = best_match[0]
+        if abs(len(word_lower) - len(corrected_lower)) > 1:
+             return word.capitalize(), False
+        
         corrected_word = dict_lower[corrected_lower]
         return corrected_word, True
         
@@ -192,6 +244,29 @@ class ApplyThread(QThread):
         self.finished_signal.emit()
 
     def apply_to_file(self, file_path, mods):
+        # 1. 자동 백업 로직 추가
+        try:
+            dir_name = os.path.dirname(file_path)
+            base_name = os.path.basename(file_path)
+            backup_dir = os.path.join(dir_name, ".aseprite_backup")
+            
+            if not os.path.exists(backup_dir):
+                os.makedirs(backup_dir)
+                
+            # Windows에서 숨김 폴더로 설정 (선택적)
+            if os.name == 'nt':
+                subprocess.run(['attrib', '+h', backup_dir], capture_output=True)
+                
+            backup_path = os.path.join(backup_dir, base_name)
+            
+            # 덮어쓰기 전에 기존에 백업된 파일이 있다면 이름에 숫자를 붙여서 보존할 수도 있지만, 
+            # 여기서는 최신 수정 직전 원본을 유지하기 위해 덮어쓰거나 단순 복사합니다.
+            shutil.copy2(file_path, backup_path)
+            self.log_signal.emit(f"🔒 백업 완료: .aseprite_backup/{base_name}")
+        except Exception as e:
+            self.log_signal.emit(f"⚠️ 백업 실패 (수정은 계속 진행됨): {str(e)}")
+
+        # 2. 기존 Lua 스크립트 실행 로직
         lua_script = """
 local sprite = app.sprite
 if not sprite then return end
@@ -286,9 +361,13 @@ class ReportDialog(QDialog):
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         
+        # 행 높이를 넉넉하게 설정하여 텍스트가 잘리지 않게 함
+        self.table.verticalHeader().setDefaultSectionSize(35)
+        
         layout.addWidget(self.table)
 
         self.populate_table()
+        self.table.resizeRowsToContents() # 내용에 맞춰 다시 한번 행 높이 조절
         self.create_filter_checkboxes()
 
         btn_layout = QHBoxLayout()
@@ -441,7 +520,19 @@ class DropListWidget(QListWidget):
             event.ignore()
 
     def dropEvent(self, event):
-        files = [u.toLocalFile() for u in event.mimeData().urls() if u.toLocalFile().lower().endswith(('.ase', '.aseprite'))]
+        files = []
+        for url in event.mimeData().urls():
+            local_path = url.toLocalFile()
+            if os.path.isfile(local_path):
+                if local_path.lower().endswith(('.ase', '.aseprite')):
+                    files.append(local_path)
+            elif os.path.isdir(local_path):
+                # 폴더인 경우 하위 폴더까지 모두 검색하여 추가
+                for root, _, filenames in os.walk(local_path):
+                    for filename in filenames:
+                        if filename.lower().endswith(('.ase', '.aseprite')):
+                            files.append(os.path.join(root, filename))
+                            
         if files:
             self.files_dropped.emit(files)
 
