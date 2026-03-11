@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout,
                              QTableWidgetItem, QHeaderView, QGroupBox, QGridLayout,
                              QCheckBox)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QColor
 
 # --- Global Dictionary Configuration ---
 DICT_FILE_PATH = "custom_dictionary.json"
@@ -199,7 +200,7 @@ local function set_tag(old_name, new_name, set_repeat)
         if tag.name == old_name then
             tag.name = new_name
             if set_repeat then
-                tag.repeats = 0
+                tag.repeats = 1
             end
         end
     end
@@ -312,7 +313,7 @@ class ReportDialog(QDialog):
                     intermediate_name = intermediate_name.replace(f_str, r_str)
                 
                 new_name, is_loop, spelling_corrected = format_tag_name(intermediate_name, self.custom_dict)
-                set_repeat = is_loop and tag.get('repeats') != 0
+                set_repeat = is_loop and tag.get('repeats') != 1
 
                 issues = []
                 if original_name != intermediate_name:
@@ -356,11 +357,11 @@ class ReportDialog(QDialog):
                     self.table.setItem(row_idx, 2, QTableWidgetItem(original_name))
                     
                     new_item = QTableWidgetItem(new_name)
-                    new_item.setForeground(Qt.GlobalColor.blue)
+                    new_item.setForeground(QColor("#66b2ff"))
                     self.table.setItem(row_idx, 3, new_item)
                     
                     issue_item = QTableWidgetItem(issue_text)
-                    issue_item.setForeground(Qt.GlobalColor.red)
+                    issue_item.setForeground(QColor("#ff6b6b"))
                     self.table.setItem(row_idx, 4, issue_item)
                     
                     row_idx += 1
@@ -447,8 +448,144 @@ class DropListWidget(QListWidget):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Aseprite Tag Master (Advanced Mode)")
-        self.resize(800, 750)
+        self.setWindowTitle("Aseprite Tag Master")
+        self.resize(850, 800)
+
+        # ---------------------------------------------------
+        # 전체 UI 모던 스타일링 (QSS)
+        # ---------------------------------------------------
+        self.setStyleSheet("""
+            /* 전체 배경 및 기본 텍스트 */
+            QWidget {
+                background-color: #2b2b2b;
+                color: #e0e0e0;
+                font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+                font-size: 13px;
+            }
+
+            /* 버튼 스타일 */
+            QPushButton {
+                background-color: #3d3d3d;
+                border: 1px solid #555555;
+                border-radius: 6px;
+                padding: 6px 12px;
+                color: #e0e0e0;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #4a4a4a;
+                border: 1px solid #666666;
+            }
+            QPushButton:pressed {
+                background-color: #2a2a2a;
+            }
+            /* 검수 시작 메인 버튼 */
+            QPushButton#AnalyzeBtn {
+                background-color: #4CAF50;
+                color: white;
+                font-size: 15px;
+                font-weight: bold;
+                border: none;
+                border-radius: 8px;
+            }
+            QPushButton#AnalyzeBtn:hover {
+                background-color: #45a049;
+            }
+            QPushButton#AnalyzeBtn:pressed {
+                background-color: #3d8b40;
+            }
+
+            /* 그룹 박스 (섹션 나누기) */
+            QGroupBox {
+                border: 1px solid #555555;
+                border-radius: 8px;
+                margin-top: 25px; /* 타이틀 공간을 위해 마진 증가 */
+                padding-top: 15px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top left;
+                padding: 4px 8px; /* 패딩을 늘려 글자가 잘리지 않게 함 */
+                color: #4CAF50;
+                font-weight: bold;
+                font-size: 14px; /* 명시적인 폰트 크기 지정 */
+                left: 10px;
+                top: 2px;
+            }
+
+            /* 리스트 위젯 (드래그 앤 드롭 영역) */
+            QListWidget {
+                background-color: #1e1e1e;
+                border: 2px dashed #555555;
+                border-radius: 8px;
+                padding: 5px;
+                alternate-background-color: #252525;
+            }
+            QListWidget::item {
+                padding: 8px;
+                border-bottom: 1px solid #333333;
+            }
+            QListWidget::item:selected {
+                background-color: #3a5b3c;
+                border-radius: 4px;
+            }
+
+            /* 입력 창 */
+            QLineEdit, QTextEdit {
+                background-color: #1e1e1e;
+                border: 1px solid #555555;
+                border-radius: 6px;
+                padding: 6px;
+                color: #ffffff;
+            }
+            QLineEdit:focus, QTextEdit:focus {
+                border: 1px solid #4CAF50;
+            }
+
+            /* 테이블 위젯 (단어 치환 칸) */
+            QTableWidget {
+                background-color: #1e1e1e;
+                border: 1px solid #555555;
+                border-radius: 6px;
+                gridline-color: #333333;
+            }
+            QHeaderView::section {
+                background-color: #333333;
+                padding: 6px;
+                border: none;
+                border-right: 1px solid #444444;
+                border-bottom: 1px solid #444444;
+                font-weight: bold;
+                color: #e0e0e0;
+            }
+            QTableWidget::item {
+                padding: 4px;
+            }
+
+            /* 스크롤바 */
+            QScrollBar:vertical {
+                background-color: #2b2b2b;
+                width: 12px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #555555;
+                min-height: 20px;
+                border-radius: 6px;
+                margin: 2px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #666666;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            
+            /* 라벨 */
+            QLabel {
+                color: #cccccc;
+            }
+        """)
 
         self.aseprite_path = r"C:\Program Files (x86)\Steam\steamapps\common\Aseprite\aseprite.exe"
         self.loaded_files = set()
@@ -456,41 +593,68 @@ class MainWindow(QMainWindow):
 
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
+        # 전체 여백 및 간격 넓히기
         layout = QVBoxLayout(main_widget)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
 
-        # Path & Dict Section
+        # --- 1. Top: Path & Dict Section ---
+        group_settings = QGroupBox("환경 설정")
         path_layout = QGridLayout()
-        self.path_label = QLabel(f"Aseprite Path: {self.aseprite_path}")
+        path_layout.setContentsMargins(15, 20, 15, 15)
+        path_layout.setSpacing(10)
+        
+        self.path_label = QLabel(f"Aseprite 경로: {self.aseprite_path}")
+        self.path_label.setStyleSheet("color: #aaa; font-size: 12px;")
         btn_path = QPushButton("경로 변경")
+        btn_path.setFixedWidth(120)
         btn_path.clicked.connect(self.change_aseprite_path)
         
-        btn_dict = QPushButton("📖 단어 사전 편집기 (Dictionary)")
+        btn_dict = QPushButton("📖 스펠링 사전 편집")
         btn_dict.clicked.connect(self.open_dict_editor)
+        btn_dict.setMinimumHeight(35)
         
         path_layout.addWidget(self.path_label, 0, 0)
         path_layout.addWidget(btn_path, 0, 1)
-        path_layout.addWidget(btn_dict, 1, 1)
-        layout.addLayout(path_layout)
+        path_layout.addWidget(btn_dict, 1, 0, 1, 2)
+        group_settings.setLayout(path_layout)
+        layout.addWidget(group_settings)
 
-        # File List Section
-        layout.addWidget(QLabel("여기에 .ase / .aseprite 파일들을 드래그 앤 드롭 하세요:"))
-        self.file_list = DropListWidget()
-        self.file_list.files_dropped.connect(self.add_files)
-        layout.addWidget(self.file_list)
+        # --- 2. Middle: File List Section ---
+        group_files = QGroupBox("작업할 Aseprite 파일 목록")
+        file_layout = QVBoxLayout()
+        file_layout.setContentsMargins(15, 20, 15, 15)
         
-        btn_remove = QPushButton("선택한 파일 목록에서 제거")
+        lbl_drop = QLabel("💡 파일을 이곳에 드래그 앤 드롭 하세요 (.ase, .aseprite)")
+        lbl_drop.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        file_layout.addWidget(lbl_drop)
+        
+        self.file_list = DropListWidget()
+        self.file_list.setAlternatingRowColors(True)
+        self.file_list.files_dropped.connect(self.add_files)
+        file_layout.addWidget(self.file_list)
+        
+        btn_remove = QPushButton("🗑️ 선택한 파일 목록에서 제거")
         btn_remove.clicked.connect(self.remove_selected_files)
-        layout.addWidget(btn_remove)
+        file_layout.addWidget(btn_remove)
+        
+        group_files.setLayout(file_layout)
+        layout.addWidget(group_files, stretch=1)
 
-        # Batch Replace Section (Dynamic List)
+        # --- 3. Batch Replace Section (Dynamic List) ---
         self.replace_group = QGroupBox("다중 일괄 단어 치환 (선택사항)")
         replace_layout = QVBoxLayout()
+        replace_layout.setContentsMargins(15, 20, 15, 15)
         
         btn_replace_ctrl_layout = QHBoxLayout()
-        self.btn_add_replace = QPushButton("+ 치환 단어쌍 추가")
+        self.btn_add_replace = QPushButton("➕ 단어쌍 추가")
+        self.btn_add_replace.setFixedWidth(130)
         self.btn_add_replace.clicked.connect(self.add_replace_row)
-        self.btn_del_replace = QPushButton("- 선택된 항목 삭제")
+        
+        self.btn_del_replace = QPushButton("➖ 선택된 항목 삭제")
+        self.btn_del_replace.setFixedWidth(150)
         self.btn_del_replace.clicked.connect(self.del_replace_row)
+        
         btn_replace_ctrl_layout.addWidget(self.btn_add_replace)
         btn_replace_ctrl_layout.addWidget(self.btn_del_replace)
         btn_replace_ctrl_layout.addStretch()
@@ -506,19 +670,24 @@ class MainWindow(QMainWindow):
         self.replace_group.setLayout(replace_layout)
         layout.addWidget(self.replace_group)
 
-        # Bottom Action Buttons
-        action_layout = QHBoxLayout()
-        btn_analyze = QPushButton("검수 및 수정 리포트 보기 (Analyze)")
-        btn_analyze.setMinimumHeight(50)
-        btn_analyze.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; font-size: 14px;")
+        # --- 4. Bottom Action Buttons & Log ---
+        action_layout = QVBoxLayout()
+        action_layout.setSpacing(10)
+        
+        btn_analyze = QPushButton("🚀 검수 및 수정 리포트 보기 (Analyze)")
+        btn_analyze.setObjectName("AnalyzeBtn") # ID for specific QSS styling
+        btn_analyze.setMinimumHeight(55)
+        btn_analyze.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_analyze.clicked.connect(self.start_analysis)
         action_layout.addWidget(btn_analyze)
-        layout.addLayout(action_layout)
-
-        # Log Box
+        
         self.log_box = QTextEdit()
         self.log_box.setReadOnly(True)
-        layout.addWidget(self.log_box)
+        self.log_box.setMaximumHeight(120)
+        self.log_box.setPlaceholderText("작업 로그가 이곳에 표시됩니다...")
+        action_layout.addWidget(self.log_box)
+        
+        layout.addLayout(action_layout)
 
     def change_aseprite_path(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select aseprite.exe", "", "Executable (*.exe)")
