@@ -631,6 +631,7 @@ class MainWindow(QMainWindow):
         
         self.file_list = DropListWidget()
         self.file_list.setAlternatingRowColors(True)
+        self.file_list.setMinimumHeight(200) # 리스트 위젯 최소 높이 증가
         self.file_list.files_dropped.connect(self.add_files)
         file_layout.addWidget(self.file_list)
         
@@ -663,7 +664,9 @@ class MainWindow(QMainWindow):
         self.replace_table = QTableWidget(0, 2)
         self.replace_table.setHorizontalHeaderLabels(["찾을 단어 (Find)", "바꿀 단어 (Replace)"])
         self.replace_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.replace_table.setMaximumHeight(150)
+        self.replace_table.verticalHeader().setDefaultSectionSize(40) # 행(Row) 높이를 크게 고정하여 글자가 잘리지 않게 함
+        self.replace_table.setMinimumHeight(200) # 테이블 위젯 높이 증가
+        self.replace_table.setMaximumHeight(350)
         self.add_replace_row() # 기본 1행 추가
         replace_layout.addWidget(self.replace_table)
         
