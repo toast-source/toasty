@@ -1,0 +1,23 @@
+[
+    "Attack",
+    "Ready",
+    "Groggy",
+    "End",
+    "Loop",
+    "Channeling",
+    "Break",
+    "Idle",
+    "Walk",
+    "Run",
+    "Jump",
+    "Fall",
+    "Hit",
+    "Dead",
+    "Skill",
+    "Ultimate",
+    "Phase",
+    "Start",
+    "Intro",
+    "Outro",
+    "Chase"
+]
